@@ -1,16 +1,21 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
+import { Button } from "@/components/ui/button"
 
 function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <div className='text-[50px]'>
-      Hello World!
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Decipher</h1>
+      <div className="space-y-4">
+        <Button onClick={() => setCount((count) => count + 1)}>
+          Count is {count}
+        </Button>
+      </div>
     </div>
   )
 }
 
 export default App
+
