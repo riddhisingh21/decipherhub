@@ -8,55 +8,42 @@ const obfuscationPatterns = [
   },
   {
     name: "Hexadecimal Numbers",
-    pattern: /0x[a-f0-9]{1,4}/i,
+    pattern: /0x[a-fA-F0-9]{1,8}/g,
     explanation: "These strange-looking numbers starting with '0x' are called hexadecimal numbers. They're just regular numbers written in a different format that computers understand. Developers use them to make code harder to read.",
     example: "0x1A is the same as the number 26 in regular counting"
   },
   {
-    name: "Meaningless Variable Names",
-    pattern: /var\s+(_0x[a-f0-9]+|[a-z]{1,2})\s*=/,
-    explanation: "The code uses short, meaningless variable names like '_0x123abc' or single letters. Normal code uses descriptive names like 'userName' or 'totalPrice'. These random names make it hard to understand what the variables are used for.",
-    example: "var _0x1a2b = 'username'; // Instead of var userName = 'username';"
+    name: "Eval Function",
+    pattern: /eval\s*\(/,
+    explanation: "The eval function is used to run code that's stored as text. Obfuscators often use this to hide the real code until the program runs. This is a red flag for potentially harmful code.",
+    example: "eval('alert(\"Hidden code running!\");')"
   },
   {
     name: "String Concatenation",
-    pattern: /(['"])[^'"]*\1\s*\+\s*(['"])[^'"]*\2/,
-    explanation: "The code breaks text into smaller pieces and joins them together with '+' signs. This is done to hide the complete text and make it harder to search for specific phrases in the code.",
-    example: "'He' + 'llo' is the same as 'Hello'"
+    pattern: /(['"]).*?\1\s*\+\s*(['"]).*?\2/,
+    explanation: "This technique breaks up text into smaller pieces and joins them together. This makes it harder to search for specific text in the code and obscures the actual strings being used.",
+    example: "'He' + 'll' + 'o' instead of simply 'Hello'"
   },
   {
-    name: "Eval Function",
-    pattern: /eval\s*\(/,
-    explanation: "The 'eval' function is a powerful but dangerous JavaScript feature that runs code contained in text. Obfuscated code often uses eval to hide its real purpose until it runs. Security experts consider eval to be risky because it can execute hidden, malicious code.",
-    example: "eval('alert(\"Hello\")') runs the code alert(\"Hello\")"
+    name: "Unicode Escape Sequences",
+    pattern: /\\u[0-9a-fA-F]{4}/,
+    explanation: "These are characters represented by their Unicode code points (\\uXXXX). Instead of using normal letters, the code uses these special codes that represent the same characters but are much harder to read.",
+    example: "\\u0048\\u0065\\u006C\\u006C\\u006F instead of 'Hello'"
   },
   {
-    name: "Self-Executing Function",
-    pattern: /^\(function\s*\([^)]*\)\s*{/,
-    explanation: "This code is wrapped in what's called a 'self-executing function' - a function that runs immediately when the page loads. This technique hides the code's variables from the rest of the program and makes it harder to understand how it connects to other code.",
-    example: "(function() { alert('Hi'); })() runs immediately when loaded"
+    name: "Function Wrappers",
+    pattern: /function\s*\(\s*\)\s*{\s*return\s*function\s*\(/,
+    explanation: "This technique wraps functions inside other functions, creating multiple layers that make the code structure more complex and harder to follow. It's like putting boxes inside boxes.",
+    example: "function() { return function(x) { return x+1; }; }"
   },
   {
-    name: "String.fromCharCode",
-    pattern: /String\.fromCharCode\(/,
-    explanation: "String.fromCharCode converts numbers into text characters. Obfuscated code often uses this to hide text by storing it as numbers instead of readable text. Each number represents a single letter or symbol.",
-    example: "String.fromCharCode(72, 105) creates the text 'Hi'"
-  },
-  {
-    name: "Encoded Unicode",
-    pattern: /\\x[0-9a-f]{2}/i,
-    explanation: "These strange codes like \\x41 are called 'escape sequences' and represent text characters. Developers use them to hide readable text in the code. Each code represents a single letter or symbol.",
-    example: "\\x48\\x69 is the same as 'Hi'"
-  },
-  {
-    name: "Array Access with Bracket Notation",
-    pattern: /\[['"]\w+['"]\]/,
-    explanation: "The code uses brackets with text inside ['property'] to access object properties instead of the simpler dot notation (object.property). This makes the code harder to read but doesn't change what it does.",
-    example: "user['name'] is the same as user.name"
+    name: "Variable Name Obfuscation",
+    pattern: /var\s+(_0x[a-f0-9]{4,}|[a-z_]{1,2})\s*=/,
+    explanation: "This technique uses meaningless or confusing variable names instead of descriptive ones. This makes it very difficult to understand what the code is doing because the names give no hints about their purpose.",
+    example: "var _0x1a2b = 'username' instead of var username = 'username'"
   }
 ];
 
-// Analyze code and identify obfuscated parts
 export function detectObfuscation(code) {
   const findings = [];
   
@@ -129,33 +116,28 @@ export function generateObfuscationExplanation(code) {
   Object.values(groupedFindings).forEach(group => {
     steps.push({
       title: `${group.type} Obfuscation`,
-      content: `
-${group.explanation}
+      content: `${group.explanation}
 
 Example: ${group.example}
 
 Found in your code (${group.instances.length} instance${group.instances.length > 1 ? 's' : ''}):
-${group.instances.map((instance, i) => `
-Instance ${i+1}:
-${instance.context}
-`).join('\n')}
-      `
+
+${group.instances.map((instance, i) => `Instance ${i+1}:\n${instance.original}`).join('\n\n')}`
     });
   });
   
   // Add a summary step
   steps.push({
-    title: "What This Means",
-    content: `
-This code uses obfuscation techniques that make it deliberately hard to read. This could be for several reasons:
+    title: "Obfuscation Summary and Security Implications",
+    content: `This code contains ${findings.length} total instance${findings.length > 1 ? 's' : ''} of obfuscation across ${Object.keys(groupedFindings).length} different technique${Object.keys(groupedFindings).length > 1 ? 's' : ''}.
 
-1. To protect intellectual property (hiding how the code works)
-2. To make the file size smaller (some obfuscation techniques reduce file size)
-3. To prevent tampering with the code
-4. In some cases, to hide malicious intent
+Security Implications:
+- Obfuscated code is often used to hide malicious intent
+- The presence of ${findings.some(f => f.type === "Eval Function") ? 'eval functions is particularly concerning as they can execute arbitrary code' : 'certain obfuscation techniques may indicate an attempt to hide functionality'}
+- Code that deliberately hides its purpose should be treated with caution
+- Consider using a sandbox environment if you need to run this code
 
-While obfuscated code runs exactly the same as normal code, its purpose is hidden behind these techniques. If you didn't write this code yourself or get it from a trusted source, be cautious about running it, especially if it uses eval() or similar functions that can execute hidden code.
-    `
+While obfuscation can sometimes be used for legitimate purposes like protecting intellectual property, it's also commonly used to disguise malicious code. Exercise caution when working with heavily obfuscated code from untrusted sources.`
   });
   
   return steps;
